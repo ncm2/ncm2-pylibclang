@@ -1,6 +1,7 @@
 from ncm2 import getLogger
-from os.path import dirname, join, isfile, samefile, expanduser, expandvars
+from os.path import dirname, join, isfile, isdir, samefile, expanduser, expandvars
 from pathlib import Path
+import os
 import shlex
 import json
 
@@ -71,7 +72,7 @@ def args_from_cmake(filepath, cwd, database_paths):
 def args_from_clang_complete(filepath, cwd):
     filedir = dirname(filepath)
 
-    clang_complete = find_config([filedir, cwd], '.clang_complete')
+    clang_complete, run_dir = find_config([filedir, cwd], '.clang_complete')
 
     if not clang_complete:
         return None, None
@@ -81,12 +82,21 @@ def args_from_clang_complete(filepath, cwd):
             args = shlex.split(" ".join(f.readlines()))
             args = [expanduser(expandvars(p)) for p in args]
             logger.info('.clang_complete args: %s', args)
-            return args, dirname(clang_complete)
+            return args, run_dir
     except Exception as ex:
         logger.exception("read config file %s failed.", clang_complete)
 
     return None, None
 
+def _find_scm_dir(scm_names):
+    cwd = Path(os.getcwd())
+    dirs = [cwd.resolve()] + list(cwd.parents)
+    for d in dirs:
+        for name in scm_names:
+            scm_dir = join(str(d), name)
+            if isdir(scm_dir):
+                return scm_dir
+    return ''
 
 def find_config(bases, names):
     if isinstance(names, str):
@@ -94,6 +104,13 @@ def find_config(bases, names):
 
     if isinstance(bases, str):
         bases = [bases]
+
+    scm_dir = _find_scm_dir(['.git', '.svn', '.hg'])
+    if scm_dir:
+        for name in names:
+            p = join(scm_dir, name)
+            if isfile(p):
+                return p, str(Path(scm_dir).parent)
 
     for base in bases:
         r = Path(base).resolve()
@@ -103,6 +120,6 @@ def find_config(bases, names):
             for name in names:
                 p = join(d, name)
                 if isfile(p):
-                    return p
+                    return p, dirname(p)
 
-    return None
+    return None, None
