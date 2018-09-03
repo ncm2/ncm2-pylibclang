@@ -69,7 +69,7 @@ class Source(Ncm2Source):
             except Exception as ex:
                 from neovim import Nvim
                 nvim = self.nvim  # type: Nvim
-                def raise_ex():
+                class raise_ex():
                     raise ex
                 nvim.async_call(raise_ex)
             finally:
