@@ -25,6 +25,7 @@ def args_from_cmake(filepath, cwd, database_paths):
     filedir = dirname(filepath)
 
     cfg_path, _ = find_config([filedir, cwd], database_paths)
+    resolve = lambda fp: normpath(join(dirname(cfg_path), fp))
 
     if not cfg_path:
         return None, None
@@ -41,7 +42,21 @@ def args_from_cmake(filepath, cwd, database_paths):
                     if normpath(cmd_for) == filepath:
                         logger.info("compile_commands: %s", cmd)
                         args = _extract_args_from_cmake(cmd)
-                        return args, cmd['directory']
+
+                        fixed_args = []
+                        add_next = False
+                        for arg in args:
+                            if add_next:
+                                add_next = False
+                                fixed_args.append('-I' + resolve(arg))
+                            elif arg == '-I':
+                                add_next = True
+                            elif arg.startswith('-I'):
+                                fixed_args.append('-I' + resolve(arg[2:]))
+                            else:
+                                fixed_args.append(arg)
+
+                        return fixed_args, cmd['directory']
                 except Exception as ex:
                     logger.exception("Exception processing %s", cmd)
 
@@ -56,12 +71,11 @@ def args_from_cmake(filepath, cwd, database_paths):
                 for arg in args:
                     if add_next:
                         add_next = False
-                        all_dirs['-I' + arg] = True
-                    if arg == "-I":
+                        all_dirs['-I' + resolve(arg)] = True
+                    elif arg == "-I":
                         add_next = True
-                        continue
-                    if arg.startswith("-I"):
-                        all_dirs['-I' + arg[2:]] = True
+                    elif arg.startswith("-I"):
+                        all_dirs['-I' + resolve(arg[2:])] = True
 
             return list(all_dirs.keys()) + args, filedir
 
