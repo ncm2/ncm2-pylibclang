@@ -126,6 +126,38 @@ func! ncm2_pyclang#goto_declaration()
     call cursor(pos.lnum, pos.bcol)
 endfunc
 
+func! ncm2_pyclang#goto_declaration_split()
+    let pos = ncm2_pyclang#find_declaration()
+    if empty(pos)
+        return
+    endif
+    let filepath = expand("%:p")
+    if filepath != pos.file
+        let fes = fnameescape(pos.file)
+        exe 'split' fes
+    else
+        normal! m'
+    endif
+    call cursor(pos.lnum, pos.bcol)
+endfunc
+
+func! ncm2_pyclang#goto_declaration_vsplit()
+    let pos = ncm2_pyclang#find_declaration()
+    if empty(pos)
+        return
+    endif
+    let filepath = expand("%:p")
+    if filepath != pos.file
+        let fes = fnameescape(pos.file)
+        exe 'vsplit' fes
+    else
+        normal! m'
+    endif
+    call cursor(pos.lnum, pos.bcol)
+endfunc
+
+
+
 func! ncm2_pyclang#get_args_dir()
     return g:ncm2_pyclang#proc.call('get_args_dir',
                 \ s:data(ncm2#context(g:ncm2_pyclang#source)))
